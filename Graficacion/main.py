@@ -1,68 +1,100 @@
-import math
 import pygame
-from agente import Agente
+from math import radians
+from agente import EntidadMovil
+
+# ─────────────────────────────
+# CONFIGURACIÓN GENERAL
+# ─────────────────────────────
+DIMENSIONES = (800, 600)
+FPS = 60
+
+VELOCIDAD_LINEAL = 5
+VELOCIDAD_ANGULAR = 3
 
 
-# Inicializar pygame
-pygame.init()
-
-WIDTH = 800
-HEIGHT = 600
-
-ventana = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Agente Móvil con Rotación")
-clock = pygame.time.Clock()
+def iniciar():
+    pygame.init()
+    ventana = pygame.display.set_mode(DIMENSIONES)
+    pygame.display.set_caption("Simulación de Entidad con Colisión")
+    temporizador = pygame.time.Clock()
+    return ventana, temporizador
 
 
-# Crear agente
-player = Agente(400, 300, 60, angle=30)
+def procesar_movimiento(objeto, teclas):
+    vector_mov = pygame.Vector2(0, 0)
 
-MOVE_SPEED = 5
-ROTATE_SPEED = 3
+    if teclas[pygame.K_w] or teclas[pygame.K_UP]:
+        ang = radians(objeto.direccion)
+        vector_mov.x += VELOCIDAD_LINEAL * pygame.math.Vector2(1, 0).rotate(-objeto.direccion).x
+        vector_mov.y += VELOCIDAD_LINEAL * pygame.math.Vector2(1, 0).rotate(-objeto.direccion).y
+
+    if teclas[pygame.K_s] or teclas[pygame.K_DOWN]:
+        ang = radians(objeto.direccion)
+        vector_mov.x -= VELOCIDAD_LINEAL * pygame.math.Vector2(1, 0).rotate(-objeto.direccion).x
+        vector_mov.y -= VELOCIDAD_LINEAL * pygame.math.Vector2(1, 0).rotate(-objeto.direccion).y
+
+    objeto.posicion += vector_mov
 
 
-running = True
-while running:
-    # Eventos
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+def procesar_rotacion(objeto, teclas):
+    if teclas[pygame.K_a] or teclas[pygame.K_LEFT]:
+        objeto.direccion += VELOCIDAD_ANGULAR
 
-    keys = pygame.key.get_pressed()
+    if teclas[pygame.K_d] or teclas[pygame.K_RIGHT]:
+        objeto.direccion -= VELOCIDAD_ANGULAR
 
-    # Convertir ángulo una sola vez
-    radians = math.radians(player.angle)
-    dir_x = math.cos(radians)
-    dir_y = math.sin(radians)
+    objeto.direccion %= 360
 
-    # Movimiento adelante
-    if keys[pygame.K_w] or keys[pygame.K_UP]:
-        player.pos_x += MOVE_SPEED * dir_x
-        player.pos_y -= MOVE_SPEED * dir_y
 
-    # Movimiento atrás
-    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-        player.pos_x -= MOVE_SPEED * dir_x
-        player.pos_y += MOVE_SPEED * dir_y
+def verificar_limites(objeto, ancho, alto):
+    limite = objeto.radio * 1.1
 
-    # Rotación izquierda
-    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-        player.angle = (player.angle + ROTATE_SPEED) % 360
+    if objeto.posicion.x < limite:
+        objeto.posicion.x = limite
+        objeto.direccion = 180 - objeto.direccion
 
-    # Rotación derecha
-    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-        player.angle = (player.angle - ROTATE_SPEED) % 360
+    if objeto.posicion.x > ancho - limite:
+        objeto.posicion.x = ancho - limite
+        objeto.direccion = 180 - objeto.direccion
 
-    # Limitar al borde de la pantalla
-    margin = player.size * 1.2
-    player.pos_x = max(margin, min(player.pos_x, WIDTH - margin))
-    player.pos_y = max(margin, min(player.pos_y, HEIGHT - margin))
+    if objeto.posicion.y < limite:
+        objeto.posicion.y = limite
+        objeto.direccion = -objeto.direccion
 
-    # Dibujar
-    ventana.fill((0, 0, 0))
-    player.draw(ventana)
+    if objeto.posicion.y > alto - limite:
+        objeto.posicion.y = alto - limite
+        objeto.direccion = -objeto.direccion
 
-    pygame.display.flip()
-    clock.tick(60)
+    objeto.direccion %= 360
 
-pygame.quit()
+
+def main():
+    pantalla, reloj = iniciar()
+    ancho, alto = DIMENSIONES
+
+    jugador = EntidadMovil(ancho // 2, alto // 2, 60)
+
+    activo = True
+    while activo:
+
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                activo = False
+
+        teclas = pygame.key.get_pressed()
+
+        procesar_rotacion(jugador, teclas)
+        procesar_movimiento(jugador, teclas)
+        verificar_limites(jugador, ancho, alto)
+
+        pantalla.fill((0, 0, 0))
+        jugador.renderizar(pantalla)
+
+        pygame.display.flip()
+        reloj.tick(FPS)
+
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    main()
