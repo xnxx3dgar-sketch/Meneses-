@@ -1,48 +1,41 @@
-import math
 import pygame
+from math import sin, cos, radians
 
+class EntidadMovil:
+    def __init__(self, pos_x, pos_y, escala, direccion_inicial=30):
+        self.posicion = pygame.Vector2(pos_x, pos_y)
+        self.radio = escala
+        self.direccion = direccion_inicial
 
-class Agente:
-    def __init__(self, pos_x, pos_y, size, angle=30):
+    def _calcular_puntos(self):
         """
-        Crea un agente con:
-        - pos_x, pos_y : posición en pantalla
-        - size         : tamaño del triángulo
-        - angle        : ángulo en grados
-        """
-        self.pos_x = pos_x
-        self.pos_y = pos_y
-        self.size = size
-        self.angle = angle
-
-    def draw(self, ventana, body_color=(0, 180, 0), front_color=(255, 50, 50)):
-        """
-        Dibuja el agente como un triángulo rotado.
+        Genera los puntos rotados del triángulo en base
+        a la orientación actual.
         """
 
-        # Triángulo base (apuntando hacia arriba)
-        local_points = [
-            (0, -self.size),                  # punta frontal
-            (-self.size / 2, self.size / 2),  # esquina izquierda
-            (self.size / 2, self.size / 2)    # esquina derecha
+        base_shape = [
+            pygame.Vector2(0, -self.radio),
+            pygame.Vector2(-self.radio / 2, self.radio / 2),
+            pygame.Vector2(self.radio / 2, self.radio / 2)
         ]
 
-        # Convertir ángulo a radianes
-        radians = math.radians(self.angle)
-        cos_angle = math.cos(radians)
-        sin_angle = math.sin(radians)
+        angulo_rad = radians(self.direccion)
 
-        # Aplicar rotación
-        rotated_points = []
-        for x, y in local_points:
-            new_x = x * cos_angle - y * sin_angle
-            new_y = x * sin_angle + y * cos_angle
-            rotated_points.append((self.pos_x + new_x, self.pos_y + new_y))
+        puntos_transformados = []
+        for punto in base_shape:
+            rotado = pygame.Vector2(
+                punto.x * cos(angulo_rad) - punto.y * sin(angulo_rad),
+                punto.x * sin(angulo_rad) + punto.y * cos(angulo_rad)
+            )
+            puntos_transformados.append(self.posicion + rotado)
 
-        # Dibujar triángulo
-        pygame.draw.polygon(ventana, body_color, rotated_points)
-        pygame.draw.polygon(ventana, (255, 255, 255), rotated_points, 3)
+        return puntos_transformados
 
-        # Dibujar círculo frontal
-        front_x, front_y = rotated_points[0]
-        pygame.draw.circle(ventana, front_color, (int(front_x), int(front_y)), 10)
+    def renderizar(self, superficie, color_principal=(0,150,0), color_punta=(255,0,0)):
+        vertices = self._calcular_puntos()
+
+        pygame.draw.polygon(superficie, color_principal, vertices)
+        pygame.draw.polygon(superficie, (255,255,255), vertices, 2)
+
+        punta = vertices[0]
+        pygame.draw.circle(superficie, color_punta, (int(punta.x), int(punta.y)), 8)
